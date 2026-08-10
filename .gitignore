@@ -1,4 +1,6 @@
 node_modules/
 dist/
+example/build/
 *.tsbuildinfo
 .DS_Store
+__pycache__/

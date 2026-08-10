@@ -16,7 +16,9 @@ export const PHILOSOPHER: GazePlate = {
   // the iris/rim pair when the gain became scalar: the old gains held a
   // plateau to 0.55 of the ellipse and reached zero at 0.95 rx / 0.90 ry, so
   // iris is 0.55 of what shipped and rim is 0.95 / 0.90 of it. The VERTICAL
-  // pair is still exactly that and must stay so. See test/plates.test.ts.
+  // pair is still exactly that and must stay so; a regression test in the
+  // gallery this plate came from enforces it, and that gallery is not part of
+  // this package.
   //
   // The horizontal pair is not, any more. 0.55 of the ellipse put the plateau
   // well inside his drawn iris, so the outer third of the disc sat in the
@@ -71,8 +73,9 @@ export const PHILOSOPHER: GazePlate = {
     //
     // It never showed on memormaneo.com because normalizePointer divides by
     // the HALF-VIEWPORT: one small portrait on a long page never asked for
-    // more than a third of the range (see CAPTURE.md). One plate filling a
-    // dark screen asks for all of it the moment the cursor crosses the room.
+    // more than a third of the range, which is why the break went unseen until
+    // he was rendered large. One plate filling a dark screen asks for all of it
+    // the moment the cursor crosses the room.
     maxX: 0.006,
     maxY: 0.004,
     // The etching draws his gaze elevated, and a dark hatch cluster in the

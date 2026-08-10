@@ -14,9 +14,9 @@
     ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
     "./testing": { "types": "./dist/testing/index.d.ts", "default": "./dist/testing/index.js" }
   },
-  "files": ["dist", "README.md", "LICENSE", "NOTICE.md", "PLATES.md"],
+  "files": ["dist", "tools", "README.md", "LICENSE", "NOTICE.md", "PLATES.md"],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.example.json",
     "test": "node --test \"test/*.test.ts\"",
     "typecheck": "tsc -p tsconfig.test.json",
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
