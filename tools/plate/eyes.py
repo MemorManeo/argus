@@ -2,8 +2,8 @@
 """Crop the eye band and upscale it with a POINT filter, for the acceptance gates.
 
 At native size a hatched engraving hides everything that matters. Every rejection
-in docs/prompts/plate-prompt.md was invisible until the eyes were looked at this
-way: the clipped iris, the hatched inner sclera, the spectacle rim.
+the gallery this toolkit came from ever logged was invisible until the eyes were
+looked at this way: the clipped iris, the hatched inner sclera, the spectacle rim.
 
 Two gates, and both are judged by eye on this image, not by any number:
   1. Each iris is a complete unbroken circle, not clipped by the upper eyelid.

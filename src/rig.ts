@@ -87,10 +87,10 @@ export type FrameInput = {
   sinceMoveMs: number;
   /** The room's single flame, computed once per frame for every plate. */
   flick: Flicker;
-  /** Lamp radius in CSS pixels. The room widens it from TORCH_PX toward
-   *  TORCH_ZOOM_PX for the frame the visitor has chosen to stand in front of.
-   *  Absent on the /rig harness, which has one plate and no room, and gets the
-   *  resting torch. */
+  /** Lamp radius in CSS pixels. A page showing several plates widens it from
+   *  TORCH_PX toward TORCH_ZOOM_PX for the one the visitor has chosen to stand
+   *  in front of. Leave it out for a single plate with no surrounding page,
+   *  which gets the resting torch. */
   torchPx?: number;
 };
 
@@ -370,10 +370,11 @@ export function createRig(opts: {
       // difference and not a theoretical one.
       //
       // The two calls are mutually exclusive in the current callers, which is
-      // why this was not already broken. It is fixed anyway because ?still has
-      // to be deterministic: it is the mode the regression screenshots compare,
-      // and one live reduced-motion listener or a visibility pause would make
-      // the sequence reachable and quietly move the measurement.
+      // why this was not already broken. It is fixed anyway because a still
+      // frame has to be deterministic: it is what regression screenshots are
+      // compared against, and one live reduced-motion listener or a visibility
+      // pause would make the sequence reachable and quietly move the
+      // measurement.
       gl.uniform4f(uRest, 0, 0, 0, 0);
       gl.uniform2f(uGaze, 0, 0);
       gl.uniform1f(uFlick, 1.0);

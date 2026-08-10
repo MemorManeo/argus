@@ -103,8 +103,8 @@ const GLANCE_MICRO = 0.05; // amplitude of the live micro-drift on a fixation
 
 /** Deterministic 0..1 hash. Decorrelates successive look-points so the wander
  *  reads as random rather than a smooth periodic sweep, and does the same job
- *  for the wall's hang: `?still` has to be a reproducible poster, so nothing in
- *  this room may call Math.random. */
+ *  for the wall's hang: a still capture of a plate has to come out the same way
+ *  every time it is taken, so nothing in this room may call Math.random. */
 export const hash01 = (n: number): number => {
   const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
   return s - Math.floor(s);
@@ -125,8 +125,9 @@ function glancePoint(k: number): Vec2 {
  * eases to it over a saccade, holds a fixation (with a small live micro-drift so
  * it never freezes, since an engraving has no blink to soften a dead stare),
  * then drifts on to the next. Each window's saccade starts at a random time; the
- * turn itself takes GLANCE_SACCADE_S. Deterministic (freezable for ?still,
- * unit-testable) and bounded to a contemplative region.
+ * turn itself takes GLANCE_SACCADE_S. Deterministic, so it can be frozen at a
+ * chosen t for a reproducible still capture and unit-tested besides, and bounded
+ * to a contemplative region.
  * @param t seconds. Call it as `glanceTarget(t + plate.phase)`: the offset
  *   shifts both which window is current and which hash is drawn, so one number
  *   changes the cadence and the sequence of look-points at once.

@@ -7,15 +7,21 @@ to the top, because the framing the prompt asks for puts a little black above
 the hair and runs the shoulders off the bottom edge: trimming the bottom costs
 nothing and trimming the top costs the composition.
 
-    python3 tools/plate/derive.py docs/plates-src/nietzsche-accepted-928.png nietzsche
-    python3 tools/plate/derive.py docs/plates-src/camus-accepted.png camus --match-paper
+    python3 tools/plate/derive.py <master>.png <slug>
+    python3 tools/plate/derive.py <master>.png <slug> --match-paper
+    python3 tools/plate/derive.py <master>.png <slug> --out assets/plates
+
+It writes <out>/<slug>/albedo.jpg, creating the directory. --out defaults to
+public/plates, which is the layout of the gallery this toolkit was written in;
+pass it whenever public/ means something else in your project, as it does in a
+Next.js, Vite or Create React App tree.
 
 --match-paper is the one correction this pipeline allows itself, and it is worth
 being clear about why it is allowed when nothing else is. Everything that makes
 a plate work or fail lives in structure: where the iris sits, how close the
 hatching is laid, whether the sclera is bare. None of that can be repaired after
 the fact and none of it should be attempted; a render that fails on structure is
-re-rolled, which is what docs/plates-src and the rejection log are for.
+re-rolled, which is what keeping the masters and a rejection log are for.
 
 The colour of the paper is not structure. It is a single global property with no
 spatial component, the plate equivalent of the stock the sheet was printed on,
@@ -34,9 +40,10 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-# The gate PLATES.md derives from PLATE_W_MAX in src/room/slider.ts, and which
-# test/rig.test.ts recomputes so the two cannot drift. Restated here because a
-# Python tool cannot import it; if they disagree, the test is right.
+# The source-width floor PLATES.md derives from the widest a plate is ever laid
+# out. Restated here because a Python tool cannot import it, and it is the
+# gallery's number: recompute it for your own layout and change it here, or this
+# gate is measuring somebody else's page.
 MIN_WIDTH = 970
 GOOD_WIDTH = 1100
 QUALITY = 92
@@ -59,10 +66,15 @@ def paper_of(rgb: np.ndarray) -> np.ndarray:
     return fig[lum >= np.percentile(lum, 98)].mean(0)
 
 
-def shipped_paper(exclude: str) -> np.ndarray | None:
-    """The paper colour to aim at: the mean of every plate already hanging."""
+def shipped_paper(exclude: str, root: Path) -> np.ndarray | None:
+    """The paper colour to aim at: the mean of every plate already hanging.
+
+    Reads from the same root the new plate is written to, so --match-paper
+    matches against the plates it is about to sit beside and not against
+    whatever happens to be under the default path.
+    """
     papers = []
-    for d in sorted(PLATES.iterdir()) if PLATES.is_dir() else []:
+    for d in sorted(root.iterdir()) if root.is_dir() else []:
         if not d.is_dir() or d.name == exclude:
             continue
         alb = d / "albedo.jpg"
@@ -79,6 +91,14 @@ def main() -> int:
         "--match-paper",
         action="store_true",
         help="scale the channels so bare paper matches the plates already hanging",
+    )
+    ap.add_argument(
+        "--out",
+        type=Path,
+        default=PLATES,
+        help=f"directory the plate's folder is created in (default: {PLATES}). "
+             "This tool CREATES that directory, so pass it whenever public/ "
+             "means something else in your project",
     )
     a = ap.parse_args()
 
@@ -102,7 +122,7 @@ def main() -> int:
           f"warmth R-B {mine[0] - mine[2]:+.1f}")
 
     if a.match_paper:
-        want = shipped_paper(exclude=a.slug)
+        want = shipped_paper(exclude=a.slug, root=a.out)
         if want is None:
             print("  no other plate to match against, leaving the paper alone")
         else:
@@ -119,7 +139,7 @@ def main() -> int:
             print(f"  paper now #{''.join(f'{int(round(c)):02x}' for c in got)}  "
                   f"warmth R-B {got[0] - got[2]:+.1f}")
 
-    dst = PLATES / a.slug
+    dst = a.out / a.slug
     dst.mkdir(parents=True, exist_ok=True)
     path = dst / "albedo.jpg"
     out.save(path, "JPEG", quality=QUALITY, optimize=True, progressive=True)

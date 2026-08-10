@@ -105,6 +105,17 @@ The default band is 0.28 to 0.46 of the height, which suits the philosopher. Pas
     python3 tools/plate/eyes.py public/plates/<slug>/albedo.jpg /tmp/eyes.png
     python3 tools/plate/grid.py public/plates/<slug>/albedo.jpg /tmp/grid.png
 
+`derive.py` is the one tool here that CREATES a directory rather than reading
+one, and by default it creates `public/plates/<slug>/`. In a Next.js, Vite or
+Create React App tree `public/` already means something specific, so say where
+the plate should go and pass the same path to the tools that follow:
+
+    python3 tools/plate/derive.py <master>.png <slug> --out assets/plates
+    python3 tools/plate/depth.py assets/plates/<slug>/albedo.jpg --sigma 6
+
+`--out` also decides which plates `--match-paper` matches against, since it
+compares against the ones the new plate is about to sit beside.
+
 `tone.py` runs first because it is the cheapest rejection. It reports a render's
 paper colour, figure tonal range, background purity and width against the plates
 already hanging, and a master that lands outside the shipped spread will read as

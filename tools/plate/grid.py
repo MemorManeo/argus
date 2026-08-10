@@ -2,9 +2,9 @@
 """Lay a labelled 0.05-step UV grid over a plate, for reading off eye ellipses.
 
 Image coordinates: top-left origin, y down, fractions of width and height. That
-is the space src/plates/types.ts stores, and the flip to GL UV happens exactly
-once, in src/gaze/rig.ts. Read the numbers off this image as they are; do not
-flip anything by hand.
+is the space a GazePlate stores its ellipses in (src/plate.ts), and the flip to
+GL UV happens exactly once, in src/rig.ts. Read the numbers off this image as
+they are; do not flip anything by hand.
 
 Output is a throwaway. Write it to the scratchpad, never to the repo.
 
