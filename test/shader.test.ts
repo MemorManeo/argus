@@ -2,7 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { VERT, FRAG, UNIFORMS } from "../src/shader.ts";
-import type { Ellipse, Radii } from "../src/plate.ts";
 import {
   gain,
   lidGain,
@@ -12,7 +11,6 @@ import {
   insideIris,
   overRegion,
   RAYS,
-  GRID,
   type Lid,
 } from "../src/testing/index.ts";
 
@@ -344,4 +342,68 @@ test("the vertical warp falls monotonically from the iris out to the reach", () 
       prev = v;
     }
   }
+});
+
+// --- The fold search --------------------------------------------------------
+
+test("the lid follow moves the vertical fold out by 1 / (1 - follow), and leaves the horizontal one alone", () => {
+  // The three cases that used to exercise foldTravel are per-plate and live in
+  // the gallery now, so without this one a refactor of its two-dimensional
+  // search would go green here and only break over there, on faces this
+  // repository cannot see. It pins the relationship rather than a measurement:
+  // no plate geometry is needed to state it, and a number read off a plate
+  // would not have survived the split anyway.
+  //
+  // The claim is the one src/testing/index.ts argues in prose above foldTravel.
+  // The vertical field falls from 1 to lidFollow across the iris-to-rim band
+  // instead of from 1 to 0, so its steepest slope drops by (1 - lidFollow), and
+  // the fold, which is one over that slope, moves out by the reciprocal.
+  const base: Lid = { fade: 0, follow: 0, reach: 2 };
+  const across = foldTravel(IRIS, RIM, "x", base);
+  const down = foldTravel(IRIS, RIM, "y", base);
+  assert.ok(Number.isFinite(across) && across > 0, `the horizontal fold came back at ${across}`);
+  assert.ok(Number.isFinite(down) && down > 0, `the vertical fold came back at ${down}`);
+
+  // The sweep stops at 0.6 for a reason, and the block below it is the reason.
+  for (const follow of [0.2, 0.4, 0.6]) {
+    const lid: Lid = { fade: 0, follow, reach: 2 };
+    // Relative, and on the ratio rather than on the fold itself, because the
+    // fold is a UV length whose absolute size means nothing here. The search
+    // shrinks its window 32-fold on each of 8 passes, so the located maximum is
+    // good to 5e-13 on these fixtures, measured. 1e-9 sits three orders above
+    // that floor and seven below the 7.6e-2 miss the model shows when the reach
+    // is too narrow, so it can neither flake nor pass a broken blend.
+    const got = foldTravel(IRIS, RIM, "y", lid) / down;
+    const want = 1 / (1 - follow);
+    assert.ok(
+      Math.abs(got / want - 1) < 1e-9,
+      `follow ${follow}: the vertical fold moved out ${got} times, not ${want}`,
+    );
+    // Exactly, not approximately. The horizontal offset is gaze.x * g and the
+    // lid blend never reaches it, so a horizontal fold that shifts by any
+    // amount at all means the blend has escaped onto the one axis every plate
+    // is tuned right up against.
+    assert.equal(
+      foldTravel(IRIS, RIM, "x", lid),
+      across,
+      `follow ${follow}: the horizontal fold moved`,
+    );
+  }
+
+  // The reciprocal is a ceiling the outer band has to be wide enough to pay
+  // for, not an identity. The follow is shed a second time across rim to
+  // rim * reach, and once that slope is the steeper of the two it binds first:
+  // at this reach a follow of 0.8 lands at 3.03 times rather than 5, which is
+  // why the sweep above stops at 0.6. Bounded on both sides rather than pinned
+  // to 3.03, because the point is which band binds and not the digits.
+  //
+  // The upper bound is the one that matters to a face. Reading a fold as wider
+  // than it is hands a plate headroom that is not there, and headroom that is
+  // not there is a pupil that doubles back over its own sclera.
+  const strained = foldTravel(IRIS, RIM, "y", { fade: 0, follow: 0.8, reach: 2 }) / down;
+  assert.ok(strained > 1, `a lid that follows should still move the fold out, not to ${strained}`);
+  assert.ok(
+    strained < 1 / (1 - 0.8),
+    `the outer band should bind before the reciprocal, but the fold reached ${strained}`,
+  );
 });
