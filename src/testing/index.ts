@@ -9,10 +9,17 @@
  * mirrors that drift, which is the exact failure they exist to catch.
  *
  * `clamp01`, `smoothstep` and `mix` are deliberately local rather than imported
- * from ../motion.ts. GLSL spells mix as a * (1 - t) + b * t and motion.ts spells
- * it a + (b - a) * t, which is the same number in algebra and not always the
- * same float. Several tests here assert exact equality on the grounds that mix
- * at t = 0 returns `a` bit for bit, so the spelling is load bearing.
+ * from ../motion.ts. A mirror exists to reproduce an expression, so it spells the
+ * expression the way the GLSL spells it: mix here is a * (1 - t) + b * t, where
+ * motion.ts writes a + (b - a) * t. The two are the same number in algebra and
+ * not always the same float, and a paraphrase's last bits are nobody's intent.
+ *
+ * The t = 0 identity is not what makes the local copy necessary, though it reads
+ * like it. Both spellings return `a` bit for bit there: measured over 400000
+ * random pairs they disagree 0 times at t = 0, and in roughly a third of them at
+ * interior t, by up to 8e-12 relative. Swapping motion.ts's spelling in leaves
+ * the whole suite passing, so this is a convention and not a check. Whoever
+ * breaks it will not be told.
  */
 import type { Ellipse, Radii } from "../plate.ts";
 
