@@ -1,0 +1,28 @@
+{
+  "name": "@memormaneo/argus",
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@11.2.2",
+  "description": "Engraved portraits that watch your cursor. A WebGL2 gaze rig.",
+  "license": "MIT",
+  "author": "MemorManeo (https://memormaneo.com)",
+  "homepage": "https://github.com/MemorManeo/argus",
+  "repository": { "type": "git", "url": "git+https://github.com/MemorManeo/argus.git" },
+  "keywords": ["webgl", "webgl2", "portrait", "gaze", "shader", "parallax", "engraving"],
+  "sideEffects": false,
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./testing": { "types": "./dist/testing/index.d.ts", "default": "./dist/testing/index.js" }
+  },
+  "files": ["dist", "README.md", "LICENSE", "NOTICE.md", "PLATES.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test \"test/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.9.3"
+  }
+}
