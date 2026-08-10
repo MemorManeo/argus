@@ -10,9 +10,22 @@ That failure survived three separate hand-written detectors and a visual ellipse
 overlay in one sitting. It is invisible at rest and invisible in the numbers; it
 is obvious the moment you render it. So render it.
 
-    python3 tools/plate/warp.py schopenhauer
-    python3 tools/plate/warp.py schopenhauer --iris-ry 0.0208 --rim-ry 0.026
-    python3 tools/plate/warp.py --all
+Point it at a plate record as JSON and at the directory holding that plate's two
+images. On the worked example in this repository:
+
+    node --experimental-strip-types \\
+      -e 'import("./example/plate.ts").then(m => console.log(JSON.stringify([m.PHILOSOPHER])))' \\
+      > /tmp/plates.json
+    python3 tools/plate/warp.py philosopher --plates /tmp/plates.json --dir example
+    python3 tools/plate/warp.py philosopher --plates /tmp/plates.json --dir example \\
+      --iris-ry 0.0208 --rim-ry 0.026
+    python3 tools/plate/warp.py --all --plates /tmp/plates.json --dir example
+
+The record is whatever `GazePlate` holds, so any way of getting one to JSON will
+do; the node line above is only the shortest way when it is authored in
+TypeScript. With --plates omitted the tool falls back to reading a `PLATES`
+manifest out of ./src/plates/index.ts and the images out of public/plates/<slug>/,
+which is the layout of the gallery this toolkit was written in.
 
 Writes a strip per eye: rest on top, full gaze to each side beneath. Read the
 BORDER of the iris, not its middle. A disc that translates rigidly keeps its
@@ -20,7 +33,7 @@ outline; one whose edge is outside the plateau grows a flat, a hook or a hard
 dark arc where the compression piles pixels up.
 
 The overrides exist so a candidate calibration can be seen before it is written
-into the manifest. They apply to both eyes.
+down. They apply to both eyes.
 """
 
 import argparse
@@ -35,12 +48,43 @@ from PIL import Image
 PLATES = Path("public/plates")
 
 
-def load_plates() -> list[dict]:
-    """Read the manifest through node rather than parsing TypeScript.
+def assets_for(slug: str, override: Path | None) -> Path:
+    """Where this plate's albedo.jpg and depth.png live.
 
+    Defaults to the gallery's layout so nothing that worked before changes; pass
+    --dir for any other arrangement, since the library itself only ever takes two
+    URLs and has no opinion about where they sit.
+    """
+    d = override if override is not None else PLATES / slug
+    for name in ("albedo.jpg", "depth.png"):
+        if not (d / name).is_file():
+            sys.exit(f"{d / name} not found; pass --dir with the directory holding both images")
+    return d
+
+
+def load_plates(src: Path | None) -> list[dict]:
+    """Plate records, from a JSON file if one was given and from the gallery's
+    TypeScript manifest if not.
+
+    The JSON route is the portable one: a plate record is plain data, so a caller
+    holding one in any language can hand it over without this tool knowing how it
+    was authored. It accepts a single record or a list of them.
+
+    The fallback reads the manifest through node rather than parsing TypeScript.
     The values that matter are the ones the shader is handed, so they are worth
     taking from the module the shader is fed by and not from a regex over it.
     """
+    if src is not None:
+        try:
+            data = json.loads(src.read_text())
+        except (OSError, json.JSONDecodeError) as err:
+            sys.exit(f"could not read {src}: {err}")
+        plates = data if isinstance(data, list) else [data]
+        for p in plates:
+            if "slug" not in p or "eyes" not in p or "gaze" not in p:
+                sys.exit(f"{src}: not a plate record; needs slug, eyes and gaze")
+        return plates
+
     out = subprocess.run(
         [
             "node",
@@ -111,9 +155,9 @@ def warp(albedo: np.ndarray, depth: np.ndarray, p: dict, mouse: tuple[float, flo
     return albedo[uy, ux]
 
 
-def strip(p: dict, over: dict, zoom: int, out_dir: Path) -> list[Path]:
-    alb = np.asarray(Image.open(PLATES / p["slug"] / "albedo.jpg").convert("RGB"), dtype=float)
-    dep = np.asarray(Image.open(PLATES / p["slug"] / "depth.png").convert("L"), dtype=float)
+def strip(p: dict, over: dict, zoom: int, out_dir: Path, assets: Path) -> list[Path]:
+    alb = np.asarray(Image.open(assets / "albedo.jpg").convert("RGB"), dtype=float)
+    dep = np.asarray(Image.open(assets / "depth.png").convert("L"), dtype=float)
     h, w = alb.shape[:2]
     frames = [
         ("rest", warp(alb, dep, p, (0.0, 0.0), over)),
@@ -152,26 +196,34 @@ def main() -> int:
     ap.add_argument("--rim-ry", type=float)
     ap.add_argument("--zoom", type=int, default=5)
     ap.add_argument("--out", type=Path, default=Path("/tmp"))
+    ap.add_argument("--plates", type=Path,
+                    help="JSON file holding one plate record or a list of them")
+    ap.add_argument("--dir", type=Path, dest="assets",
+                    help="directory holding albedo.jpg and depth.png "
+                         "(default: public/plates/<slug>)")
     a = ap.parse_args()
 
     over = {k: v for k, v in (
         ("iris_rx", a.iris_rx), ("iris_ry", a.iris_ry),
         ("rim_rx", a.rim_rx), ("rim_ry", a.rim_ry)) if v is not None}
 
-    plates = load_plates()
+    plates = load_plates(a.plates)
     want = [p for p in plates if a.all or p["slug"] == a.slug]
     if not want:
         sys.exit(f"no plate named {a.slug!r}; have {[p['slug'] for p in plates]}")
+    if a.assets is not None and len(want) > 1:
+        sys.exit("--dir names one plate's images, so it cannot be used with --all")
 
     for p in want:
-        h = Image.open(PLATES / p["slug"] / "albedo.jpg").height
-        w = Image.open(PLATES / p["slug"] / "albedo.jpg").width
+        assets = assets_for(p["slug"], a.assets)
+        with Image.open(assets / "albedo.jpg") as im:
+            w, h = im.size
         e = p["eyes"]["l"]
         irx = over.get("iris_rx", e["iris"]["rx"]) * w
         iry = over.get("iris_ry", e["iris"]["ry"]) * h
         print(f"{p['slug']}: iris {irx:.1f} x {iry:.1f}px, rx/ry {irx / iry:.2f}"
               f"{'   <-- not a circle. A whole drawn iris is; only a clipped one, like the philosopher, is not' if abs(irx / iry - 1) > 0.08 else ''}")
-        for path in strip(p, over, a.zoom, a.out):
+        for path in strip(p, over, a.zoom, a.out, assets):
             print(f"  {path}   rows: rest, gaze left, gaze right, gaze down")
     return 0
 

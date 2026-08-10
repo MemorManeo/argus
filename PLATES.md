@@ -18,6 +18,25 @@ gallery's asset layout. They read and write `public/plates/<slug>/albedo.jpg`
 relative to the directory you run them from, and `derive.py` creates it. That is
 their convention and not the library's: `createRig` only ever takes two URLs, so
 put the images wherever your own build serves them from and pass the paths.
+`warp.py` is the one tool that needs more than a path substitution to run outside
+that gallery, and it takes `--plates` and `--dir` for exactly that; see
+[Rendering the warp](#rendering-the-warp).
+
+## Before you start: the toolkit's dependencies
+
+    python3 -m venv .venv && . .venv/bin/activate
+    pip install -r tools/plate/requirements.txt
+
+That is numpy, pillow and scipy, and it covers seven of the eight tools.
+
+`depth.py` is the exception. Estimating a depth map runs Depth Anything V2 Small,
+so it additionally wants torch and transformers, which are a multi-gigabyte
+install and a model download on first use:
+
+    pip install "torch>=2.0" "transformers>=4.38"
+
+Install those only when you need to generate a map. If you already have a depth
+map, or you are painting one by hand, the rest of the pipeline runs without them.
 
 ## What decides whether a plate will work
 
@@ -323,6 +342,36 @@ must never be copied to a new face without measuring:
 
 A frontal plate with both sockets lit needs none of the four. Nietzsche needs
 none of the four. That is most of why frontal poses are worth insisting on.
+
+## Rendering the warp
+
+Every other tool here measures the plate at rest. `warp.py` applies both warps at
+full travel and crops the eyes, and it is the only check that catches the drawn
+iris poking outside the plateau, which is invisible at rest and invisible in the
+numbers and obvious the moment you render it. That failure once survived three
+hand-written detectors and an ellipse overlay in one sitting. So render it.
+
+It needs the plate record as data. Hand it a JSON file with `--plates`, and the
+directory holding that plate's two images with `--dir`. If the record is authored
+in TypeScript, as `example/plate.ts` is, node will print it for you:
+
+    node --experimental-strip-types \
+      -e 'import("./example/plate.ts").then(m => console.log(JSON.stringify([m.PHILOSOPHER])))' \
+      > /tmp/plates.json
+    python3 tools/plate/warp.py philosopher --plates /tmp/plates.json --dir example
+
+The file may hold one record or a list of them. Any way of getting a `GazePlate`
+into JSON will do; the node line is just the shortest one when it lives in a
+module. With `--plates` omitted the tool falls back to reading a `PLATES` manifest
+out of `./src/plates/index.ts` and images out of `public/plates/<slug>/`, which is
+the gallery's layout and is why the flags exist.
+
+It writes a strip per eye: rest on top, then full gaze left, right and down. Read
+the BORDER of the iris, not its middle. A disc that translates rigidly keeps its
+outline; one whose edge is outside the plateau grows a flat, a hook, or a hard
+dark arc where the compression piles pixels up. The `--iris-rx/ry` and
+`--rim-rx/ry` overrides let a candidate calibration be seen before it is written
+down, and they apply to both eyes.
 
 ## What the plates are
 

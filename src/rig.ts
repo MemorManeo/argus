@@ -17,8 +17,9 @@ import type { Ellipse, GazePlate, Radii } from "./plate.ts";
 /**
  * The gaze rig: a canvas, a plate record and a pointer, drawn.
  *
- * Vendored 2026-08-06 from memormaneo-web/app/components/brand/PortraitGaze.tsx.
- * Two deliberate changes from the original, both forced by the ring:
+ * Vendored 2026-08-06 from the landing portrait of memormaneo.com, which ran one
+ * sitter as a single React component. Two deliberate changes from that original,
+ * both forced by putting a whole wall of them on one page:
  *
  *   1. It does not own the clock. The original ran its own rAF, its own pointer
  *      listeners and its own IntersectionObserver. Nine of those in a room is
@@ -32,8 +33,8 @@ import type { Ellipse, GazePlate, Radii } from "./plate.ts";
  *      gaze needs to know.
  *
  * Liftable for real: the only local import above is ./plate.ts, which declares
- * GazePlate and Ellipse and depends on nothing under src/plates itself. A
- * second consumer, including lifting this rig back into memormaneo.com for one
+ * GazePlate and Ellipse and depends on nothing in any caller's plate domain. A
+ * second consumer, including putting this rig back on memormaneo.com for one
  * portrait, carries those two types along and nothing plate-specific: no
  * caption, no ring angle, no provenance text.
  *
@@ -59,9 +60,9 @@ const K_EYE = 0.2;
 const LIGHT_SWAY = 0.006;
 /** Lamp radius in CSS pixels while the visitor is surveying the wall. One torch
  *  in a dark room: a plate a frame-width from the cursor sits at the shader's
- *  0.035 ambient floor and is discovered by sweeping, not by being lit. The
- *  same radius lights the wall plane behind the frames, so the two are one
- *  light; see src/room/architecture.ts. */
+ *  0.035 ambient floor and is discovered by sweeping, not by being lit. A page
+ *  that also lights the wall behind its frames should light it at this same
+ *  radius, so that the two read as one flame rather than two. */
 export const TORCH_PX = 320;
 /** And once they have flown into a plate, wide enough to wash the whole face.
  *  A spot-lit portrait you have chosen to stand in front of reads as a mistake.
@@ -71,8 +72,9 @@ export const TORCH_PX = 320;
  *  a third of the lamp's gain at a screen corner instead of none, and flattens
  *  the across-plate brightness spread from about 2.56x to about 1.25x. */
 export const TORCH_ZOOM_PX = 1800;
-/** What still() sets, in plate heights. This is the literal the poster was
- *  measured at, kept so ?still stays comparable across this change. */
+/** What still() sets, in plate heights. This is the literal the static poster
+ *  was measured at, kept unchanged so that captures stay comparable with the
+ *  ones taken before the reach became a parameter. */
 export const TORCH_STILL_REACH = 0.85;
 
 export type FrameInput = {
@@ -97,14 +99,16 @@ export type RigHandle = {
    *  shader burns. The room hands it to the CSS as --lit so the DOM moulding,
    *  which no shader touches, sits in the same light as the print inside it. */
   frame(input: FrameInput): number;
-  /** One deterministic neutral frame: reduced motion, no fine pointer, ?still.
-   *  Deliberately returns no lit value: the branches that call it never run the
-   *  room's loop, so --lit is never written and the moulding stays at the CSS
-   *  default of fully lit, which is the plate as a poster wants it. */
+  /** One deterministic neutral frame, for the branches that draw a plate once
+   *  and never animate it: reduced motion, no fine pointer, a static capture.
+   *  Deliberately returns no lit value, because those branches never run a
+   *  frame loop either, so --lit is never written and any surround styled from
+   *  it stays at its CSS default of fully lit, which is the plate as a poster
+   *  wants it. */
   still(): void;
   /** Re-allocate the drawing buffer from the host's layout box, optionally
-   *  scaled. The scale is a function of the global zoom and never of a rect, so
-   *  panning reallocates nothing; see camera.ts's bufferScale. */
+   *  scaled. Derive that scale from your own zoom level and never from a
+   *  measured rect, so that panning reallocates nothing. */
   resize(scale?: number): void;
   destroy(): void;
 };

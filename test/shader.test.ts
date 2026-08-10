@@ -142,7 +142,7 @@ test("the lamp radius is a uniform, so one torch can light the whole wall", () =
 });
 
 test("the lamp falloff still reads the way its CPU mirror does", () => {
-  // litAtCentre in src/gaze/rig.ts is these two lines, hand-written in
+  // litAtCentre in src/rig.ts is these two lines, hand-written in
   // TypeScript and evaluated at uv (0.5, 0.5), because the moulding around a
   // print is a DOM layer no shader ever samples. Nothing at runtime compares the
   // two, so this is the pin: edit the falloff here and this test sends the next
@@ -157,7 +157,7 @@ test("the lamp falloff still reads the way its CPU mirror does", () => {
 
 test("the albedo is sampled with a negative LOD bias, and the depth is not", () => {
   // These two belong together and are pinned together, because either alone is
-  // a regression. src/gaze/rig.ts calls generateMipmap so that a plate the
+  // a regression. src/rig.ts calls generateMipmap so that a plate the
   // torch has not reached stops aliasing its own hatching; without the bias
   // that same call spends most of its weight on the half-resolution mip at the
   // size a plate is ACTUALLY displayed at, and the engraving turns to smooth

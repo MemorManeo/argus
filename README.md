@@ -157,6 +157,22 @@ and feathering, a UV grid overlay, an eye-band upscaler, an ellipse overlay, and
 renderer that applies both warps at full travel so a bad fit is visible rather
 than theoretical.
 
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r tools/plate/requirements.txt
+```
+
+That is numpy, pillow and scipy, and it covers seven of the eight tools.
+`depth.py` additionally needs torch and transformers, a multi-gigabyte install
+and a model download, because it runs Depth Anything V2 Small to estimate a map.
+Install those only if you need one generated.
+
+The toolkit was written inside a private gallery and still defaults to that
+gallery's asset layout, `public/plates/<slug>/`, so most tools want a path
+argument pointing somewhere else. `warp.py` needs two, `--plates` with the plate
+record as JSON and `--dir` with the images, because it reads a record rather than
+just a file; `PLATES.md` shows the one-liner that produces that JSON.
+
 Be clear about what this costs. **Calibrating a plate is measurement work, not a
 config tweak.** You read numbers off the picture, draw them back over it, look,
 and adjust, usually two or three rounds. A near-frontal pose with both eye sockets

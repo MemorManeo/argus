@@ -1,0 +1,24 @@
+# Python dependencies for the plate calibration toolkit.
+#
+#     python3 -m venv .venv && . .venv/bin/activate
+#     pip install -r tools/plate/requirements.txt
+#
+# These three cover seven of the eight tools: derive.py, ellipse.py, eyes.py,
+# grid.py, measure.py, tone.py and warp.py. Verified on Python 3.12 with the
+# versions noted beside each.
+
+numpy>=1.26        # verified at 2.4.3
+pillow>=10.0       # verified at 11.3.0
+scipy>=1.11        # verified at 1.17.1, used by depth.py and measure.py
+
+# depth.py is the exception, and it is a heavy one. Estimating a depth map runs
+# Depth Anything V2 Small, so it wants torch and transformers, which are a
+# multi-gigabyte install and a model download on first use. Everything else in
+# the pipeline runs without them, so they are deliberately NOT in the list
+# above: install them only when you need to generate a map.
+#
+#     pip install "torch>=2.0" "transformers>=4.38"
+#
+# Verified with torch 2.11.0 and transformers 4.38.2, CPU inference, model
+# already in the Hugging Face cache so it runs offline. A cold cache downloads
+# roughly 100MB of weights the first time.

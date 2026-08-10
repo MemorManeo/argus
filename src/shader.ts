@@ -1,8 +1,7 @@
 /**
- * The gaze shader. Vendored 2026-08-06 from
- * memormaneo-web/app/components/brand/PortraitGaze.tsx:94-154, unchanged in
- * substance: the uniforms that were per-component constants there are now
- * per-plate data here, and that is the only difference.
+ * The gaze shader. Vendored 2026-08-06 from the landing portrait of
+ * memormaneo.com, unchanged in substance: the uniforms that were per-component
+ * constants there are now per-plate data here, and that is the only difference.
  *
  * Every asymmetry in the eye gains is a repair for something a real plate did
  * wrong. test/shader.test.ts pins the ones that cost the most to find.
@@ -41,11 +40,12 @@ out vec4 frag;
 // subtle loss: the hatching is the whole subject, and at that level a face
 // resolves into smooth tone and stops looking printed.
 //
-// It is safe to pull it back because the buffer is deliberately larger than the
-// plate is displayed at (camera.ts's bufferCover holds it above 1), so the
-// compositor's own downsample is already supersampling every fragment drawn
-// here. The mips are still there and still take over when a plate really is
-// tiny, which is the aliasing this bias must not undo.
+// It is safe to pull it back only because the drawing buffer is deliberately
+// larger than the plate is displayed at, so the compositor's own downsample is
+// already supersampling every fragment drawn here. Keep that ratio above 1 when
+// you scale the buffer, or this bias has nothing paying for it. The mips are
+// still there and still take over when a plate really is tiny, which is the
+// aliasing this bias must not undo.
 const float LOD_BIAS = -0.75;
 float dep(vec2 uv){ return texture(uDepth, uv).r; }
 // ONE SCALAR gain, applied to both axes, with NO exception. This is the whole

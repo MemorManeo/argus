@@ -2,9 +2,9 @@
  * Pure motion helpers for a candlelit engraved portrait. No DOM, no side
  * effects, unit tested in test/motion.test.ts.
  *
- * Vendored 2026-08-06 from memormaneo-web/lib/portraitMotion.mjs, converted to
- * TypeScript. Behaviour is identical; the tests in test/motion.test.ts are that
- * repo's own test file, ported, and they are the proof.
+ * Vendored 2026-08-06 from the landing portrait of memormaneo.com, converted to
+ * TypeScript. Behaviour is identical; the cases in test/motion.test.ts are that
+ * portrait's own test file, ported, and they are the proof.
  */
 
 export type Vec2 = { x: number; y: number };

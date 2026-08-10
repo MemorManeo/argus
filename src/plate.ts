@@ -1,18 +1,18 @@
 /**
  * The engine's view of a plate: everything createRig actually reads to draw a
- * sitter. Plate-domain concerns (a caption, a slot on the ring, provenance
- * text) are not here; the Plate type in src/plates layers those on top of
- * this shape.
+ * sitter. Plate-domain concerns (a caption, a slot on a ring, provenance text)
+ * are not here. They belong to whatever owns the sitter, which layers its own
+ * richer record on top of this shape.
  *
- * Nothing in this file, or anywhere else under src/gaze/, imports from
- * src/plates. The dependency runs one way, src/plates depends on src/gaze and
- * never the reverse, so src/gaze/ can be lifted out with GazePlate and Ellipse
+ * The dependency runs one way and must keep running one way: the engine never
+ * reaches back into the caller's plate domain. That is what let this rig be
+ * lifted out of the gallery it was written in with GazePlate and Ellipse
  * carried along and nothing else.
  */
 
 /** An axis-aligned ellipse in IMAGE coordinates: top-left origin, y down,
  *  fractions of width and height. The flip to GL UV happens once, at the
- *  uniform upload in src/gaze/rig.ts, and nowhere else. */
+ *  uniform upload in rig.ts, and nowhere else. */
 export type Ellipse = { cx: number; cy: number; rx: number; ry: number };
 
 /** Radii only, in the same image fractions. A length has no origin, so unlike
@@ -52,7 +52,8 @@ export type EyeRegion = {
  * second consumer of the engine needs exactly these fields and nothing else.
  */
 export type GazePlate = {
-  /** Directory name under public/plates. */
+  /** Identifies this plate in warnings and errors. The rig never resolves it to
+   *  a path: the albedo and depth URLs are passed to createRig directly. */
   slug: string;
 
   eyes: { l: EyeRegion; r: EyeRegion };
