@@ -19,6 +19,7 @@
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.example.json",
     "test": "node --test \"test/*.test.ts\"",
     "typecheck": "tsc -p tsconfig.test.json",
+    "prepare": "tsc -p tsconfig.json",
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {
