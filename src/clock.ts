@@ -1,8 +1,9 @@
 import { candleFlicker, type Flicker, type Vec2 } from "./motion.ts";
 
-/** Everything the room knows at one instant, computed once and handed to every
- *  plate. There is one candle in this room, so `flick` is shared; the sitters
- *  each have their own mind, so their glance phase is not (see ./phase.ts). */
+/** Everything the caller knows at one instant, computed once and handed to
+ *  every plate. There is one candle for the whole page, so `flick` is shared;
+ *  the sitters each have their own mind, so their glance phase is not (see
+ *  ./phase.ts). */
 export type GazeFrame = {
   /** Seconds since the clock started. */
   t: number;

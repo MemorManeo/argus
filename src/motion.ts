@@ -96,7 +96,7 @@ export function eyeGaze(
 // frequent but never metronomic, while the turn itself stays slow.
 /** Base seconds per look-point. Exported because a plate's phase offset must
  *  not be a small integer multiple of it, or the offset aliases back into
- *  alignment and the room saccades as one. */
+ *  alignment and every plate saccades as one. */
 export const GLANCE_WINDOW_S = 5;
 const GLANCE_SACCADE_S = 1.4; // slow, deliberate turn between look-points
 const GLANCE_MICRO = 0.05; // amplitude of the live micro-drift on a fixation
@@ -104,7 +104,7 @@ const GLANCE_MICRO = 0.05; // amplitude of the live micro-drift on a fixation
 /** Deterministic 0..1 hash. Decorrelates successive look-points so the wander
  *  reads as random rather than a smooth periodic sweep, and does the same job
  *  for the wall's hang: a still capture of a plate has to come out the same way
- *  every time it is taken, so nothing in this room may call Math.random. */
+ *  every time it is taken, so nothing here may call Math.random. */
 export const hash01 = (n: number): number => {
   const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
   return s - Math.floor(s);
@@ -151,10 +151,10 @@ export function glanceTarget(t: number): Vec2 {
  * Candle-flame flicker: a slow breathing wander with small fast shivers, layered
  * detuned sines so it never reads as periodic. Deterministic.
  *
- * There is one candle in the room, so this is computed once per frame for the
- * whole ring and handed to every plate. gain multiplies a light's intensity
- * (about 0.8 to 1.06); dx/dy are a -1..1 sway for the light's position, scaled
- * to taste at the call site.
+ * There is one candle for the whole page, so this is computed once per frame
+ * for the whole ring and handed to every plate. gain multiplies a light's
+ * intensity (about 0.8 to 1.06); dx/dy are a -1..1 sway for the light's
+ * position, scaled to taste at the call site.
  * @param t seconds
  */
 export function candleFlicker(t: number): Flicker {

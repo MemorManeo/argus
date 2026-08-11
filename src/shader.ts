@@ -142,7 +142,7 @@ void main(){
   // plate's uv, so it runs far outside 0..1 for a plate the cursor is nowhere
   // near, and this falloff darkens it to the ambient floor for free. lv is in
   // units of the plate's HEIGHT (uAspect is w/h, so it converts the x
-  // difference), which is what lets the room set uReach in screen pixels.
+  // difference), which is what lets the caller set uReach in screen pixels.
   vec2 lv = (uLight - uv) * vec2(uAspect, 1.0);
   // The 1.5 is what makes this a carried flame rather than a floodlight: a
   // plain smoothstep spends most of its range at the bright end, so the pool
@@ -152,7 +152,7 @@ void main(){
   float lamp = pow(smoothstep(uReach, 0.0, length(lv)), 1.5);
   float spec = pow(max(dot(n, normalize(vec3(lv, 0.6))), 0.0), 3.0);
   // candlelight: a near-white flame with a whisper of warmth. The print
-  // keeps its etching whites; the tint lives in the room around it.
+  // keeps its etching whites; the tint lives in the light around it.
   float lampI = lamp*(0.82 + spec*0.5) * uFlick;
   vec3 lit = vec3(0.035) + vec3(1.03, 1.0, 0.94) * lampI;
   frag = vec4(col * min(lit, vec3(1.28)), 1.0);

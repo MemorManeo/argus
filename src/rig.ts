@@ -59,7 +59,7 @@ const K_EYE = 0.2;
 /** How far the candle's sway moves the lamp, in UV. */
 const LIGHT_SWAY = 0.006;
 /** Lamp radius in CSS pixels while the visitor is surveying the wall. One torch
- *  in a dark room: a plate a frame-width from the cursor sits at the shader's
+ *  in the dark: a plate a frame-width from the cursor sits at the shader's
  *  0.035 ambient floor and is discovered by sweeping, not by being lit. A page
  *  that also lights the wall behind its frames should light it at this same
  *  radius, so that the two read as one flame rather than two. */
@@ -78,14 +78,14 @@ export const TORCH_ZOOM_PX = 1800;
 export const TORCH_STILL_REACH = 0.85;
 
 export type FrameInput = {
-  /** Seconds since the room clock started. */
+  /** Seconds since the clock started. */
   t: number;
   /** Last known pointer position in client coordinates, or null if the pointer
    *  has never been seen or has left the window. */
   pointer: Vec2 | null;
   /** Milliseconds since the pointer last moved. */
   sinceMoveMs: number;
-  /** The room's single flame, computed once per frame for every plate. */
+  /** The page's single flame, computed once per frame for every plate. */
   flick: Flicker;
   /** Lamp radius in CSS pixels. A page showing several plates widens it from
    *  TORCH_PX toward TORCH_ZOOM_PX for the one the visitor has chosen to stand
@@ -96,8 +96,9 @@ export type FrameInput = {
 
 export type RigHandle = {
   /** @returns how lit this plate's CENTRE is, 0..1, from the same falloff the
-   *  shader burns. The room hands it to the CSS as --lit so the DOM moulding,
-   *  which no shader touches, sits in the same light as the print inside it. */
+   *  shader burns. The caller hands it to the CSS as --lit so the DOM
+   *  moulding, which no shader touches, sits in the same light as the print
+   *  inside it. */
   frame(input: FrameInput): number;
   /** One deterministic neutral frame, for the branches that draw a plate once
    *  and never animate it: reduced motion, no fine pointer, a static capture.
@@ -133,13 +134,13 @@ export function rimUniform(r: Radii): [number, number] {
  * 1.0))), 1.5)` and deliberately no more of the shader's light: not the candle sway
  * paint() adds to uLight, worth about 0.01 of --lit, and not the
  * `* (0.82 + spec * 0.5) * uFlick` laid over the lamp, whose spec term wants a
- * depth map the CPU has not got. Both omissions breathe with the flame, and the
- * room skips a --lit that moved by under 0.002, so mirroring either would write
- * style on twelve elements every frame at rest. It exists because the engraved
- * moulding is a DOM background layer that no shader ever samples, so without a
- * number crossing back out of the rig a torch that leaves a print at the 0.16
- * ambient floor leaves its gilt frame at full brightness, and the wall reads as
- * eleven empty frames.
+ * depth map the CPU has not got. Both omissions breathe with the flame, and
+ * the caller skips a --lit that moved by under 0.002, so mirroring either
+ * would write style on twelve elements every frame at rest. It exists because
+ * the engraved moulding is a DOM background layer that no shader ever
+ * samples, so without a number crossing back out of the rig a torch that
+ * leaves a print at the 0.16 ambient floor leaves its gilt frame at full
+ * brightness, and the wall reads as eleven empty frames.
  *
  * @param aspect w/h of the drawing buffer, the shader's uAspect.
  */
@@ -190,7 +191,8 @@ function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLSh
 export function createRig(opts: {
   canvas: HTMLCanvasElement;
   /** The element whose layout box sizes the buffer and whose projected box
-   *  positions the gaze. In the room this is the plate's stage. */
+   *  positions the gaze. Where several plates share a page, this is that
+   *  plate's own stage. */
   host: HTMLElement;
   plate: GazePlate;
   albedo: string;

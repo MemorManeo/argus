@@ -34,8 +34,8 @@ export const PHASE_STEP = GLANCE_WINDOW_S * GOLDEN;
  * both which window is current and which hash is drawn, one number changes the
  * cadence and the sequence of look-points at once.
  *
- * The candle is deliberately not phased: there is one flame in the room, so
- * every frame breathes together while every mind wanders alone.
+ * The candle is deliberately not phased: there is one flame for the whole
+ * page, so every frame breathes together while every mind wanders alone.
  *
  * Deliberately unbounded. An earlier version wrapped this modulo nine windows to
  * keep the number small, which was pure cosmetics (nothing hand-writes a phase;
