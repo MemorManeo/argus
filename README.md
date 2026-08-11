@@ -48,6 +48,18 @@ discovered by sweeping toward it.
 pnpm add @memormaneo/argus
 ```
 
+Not on npm yet: publishing is blocked on an npm two-factor enrolment issue.
+Until that clears, install from the tagged commit instead:
+
+```bash
+pnpm add github:MemorManeo/argus#v0.1.0
+```
+
+pnpm 11 blocks a dependency's build scripts by default, and this package needs
+its `prepare` script to run (`dist/` is gitignored, so installing from git means
+building it), so add an `allowBuilds` entry for `@memormaneo/argus` in your
+`pnpm-workspace.yaml`.
+
 ## Usage
 
 ```ts
