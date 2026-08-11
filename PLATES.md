@@ -76,9 +76,13 @@ plate's layout width** for 1:1.
 Nothing sits on top of that. The page shows a print at its own layout size with
 no perspective on it and no zoom, so the whole budget is that factor times the
 widest a plate is ever laid out, which that gallery caps at 560px:
-560 x 1.733 = **970**. It derives the gate from the cap in a test rather than
-writing 970 down in two places, so raising the cap raises the gate and neither
-can drift. Do the same with your own cap.
+560 x 1.733 = **970**. That derivation runs as a test in the gallery this
+package came from (`test/resolution.test.ts`, private, not shipped here),
+which ties the gate to the layout cap so raising one raises the other. argus
+itself defines no such cap and carries no such test: 970 above is a worked
+example from one page's CSS, not a constant this package sets or checks.
+Recompute the arithmetic for your own layout, and write your own test if you
+want the same guarantee against drift.
 
 Both plates that shipped there are below it. Nietzsche at 920px is 5 percent
 upsampled at the widest layout, which is nothing. The philosopher in `example/`
