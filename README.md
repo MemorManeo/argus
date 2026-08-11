@@ -220,9 +220,10 @@ Two, and the split matters.
 
 - **The code is MIT.** Everything under `src/`, `test/`, `tools/` and
   `example/*.ts`. Use it for anything, commercial included. See [`LICENSE`](LICENSE).
-- **The example images are CC BY-NC 4.0.** `example/albedo.jpg` and
-  `example/depth.png` only. They are here so the example runs and so there is a
-  worked calibration to read. For anything commercial, bring your own plate.
+- **The example images are CC BY-NC 4.0.** `example/albedo.jpg`,
+  `example/depth.png` and `docs/example.png` (a screenshot of the two of them
+  running). They are here so the example runs and so there is a worked
+  calibration to read. For anything commercial, bring your own plate.
 
 The sitter is a generated engraving, not a scan of a historical print. He depicts
 nobody, carries no provenance and no museum holds him. See [`NOTICE.md`](NOTICE.md).

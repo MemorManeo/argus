@@ -9,8 +9,9 @@ See `LICENSE`. Use it for anything, including commercially.
 
 ## The example plate: CC BY-NC 4.0
 
-`example/albedo.jpg` and `example/depth.png` are **not** MIT. They are licensed
-Creative Commons Attribution-NonCommercial 4.0 International.
+`example/albedo.jpg`, `example/depth.png` and `docs/example.png` (a screenshot
+of the two of them running) are **not** MIT. They are licensed Creative Commons
+Attribution-NonCommercial 4.0 International.
 
 <https://creativecommons.org/licenses/by-nc/4.0/>
 
