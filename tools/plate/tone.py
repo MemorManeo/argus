@@ -33,6 +33,14 @@ from PIL import Image
 # construction and not a very deep hatch.
 BACKGROUND_MAX = 24
 
+# The philosopher ships at example/albedo.jpg, resolved from this file rather
+# than the working directory, so the default comparison works from anywhere.
+# He is the only plate this package ships, so he is the only slug this
+# shortcut covers; anyone with their own gallery of named slugs under
+# public/plates/<slug>/ still reaches them by passing --against explicitly.
+REPO = Path(__file__).resolve().parents[2]
+SHIPPED = {"philosopher": REPO / "example" / "albedo.jpg"}
+
 PLATES = Path("public/plates")
 
 # A box on the cheek and jaw, below the eyes and inside the face, as fractions of
@@ -122,14 +130,18 @@ def main() -> None:
     ap.add_argument(
         "--against",
         nargs="*",
-        default=["philosopher", "nietzsche"],
-        help="slugs under public/plates to compare with (default: both shipped)",
+        default=["philosopher"],
+        help="slugs to compare with: philosopher resolves to the shipped "
+        "example, anything else is looked up under public/plates/<slug> "
+        "(default: the shipped philosopher)",
     )
     ap.add_argument(
         "--floor",
         type=int,
         default=970,
-        help="source width floor, 1.733 * PLATE_W_MAX; see PLATES.md",
+        help="source width floor. 970 is the source gallery's own number, "
+        "1.733 * that gallery's PLATE_W_MAX (see PLATES.md); recompute it for "
+        "your own layout, this default is not a constant argus defines",
     )
     a = ap.parse_args()
 
@@ -138,7 +150,7 @@ def main() -> None:
 
     refs: dict[str, dict[str, float]] = {}
     for slug in a.against:
-        p = PLATES / slug / "albedo.jpg"
+        p = SHIPPED.get(slug, PLATES / slug / "albedo.jpg")
         if not p.exists():
             print(f"\n  (no plate at {p}, skipping)")
             continue
