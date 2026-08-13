@@ -144,6 +144,45 @@ statistics cannot see it: on a real plate the nose band moves by 0.002 between
 sigma 0 and sigma 6, while the silhouette echo it exists to remove is plainly
 visible.
 
+### The pivot, and why 0.5 is not it
+
+Then calibrate the map you just made, or the one you were handed:
+
+    python3 tools/plate/depth.py --calibrate public/plates/<slug>/depth.png
+
+It prints a `depth: { pivot, scale }` pair to paste into the plate record, and
+the mask it measured them over, because the numbers mean nothing without it.
+That path needs only numpy and PIL: it reads a FINISHED map rather than making
+one, which is the case that matters, since a shipped plate's depth.png usually
+cannot be regenerated.
+
+The pivot is the depth the head rotates about, and the naive 0.5 is wrong on
+every map this estimator produces. Measured over five plates: the sitter sits at
+0.77 and the backdrop at 0.03, so the step between them takes 0.67 to 0.77 of
+the range while the entire relief of the FACE gets 0.165 to 0.231, and only 5 to
+12 percent of pixels lie anywhere near 0.5, all of them in the feathered
+silhouette ring. A pivot of 0.5 therefore puts the whole head on one side of the
+axis: it translates bodily, the backdrop counter-slides, and the interior
+plateaus (nose, moustache, hair, shoulders) each slide rigidly at their own
+rate. On a 920px plate at `amp` 0.045 that was about 4px of interior
+differential against 31px of head-against-backdrop, so the cardboard signal ran
+about seven times stronger than the rotation signal. It is invisible at rest and
+invisible in an eye crop, which is why `warp.py --full` exists.
+
+`scale` then takes the relief that is left out to roughly ±1, and the shader
+passes the result through `tanh`, which is near-linear across the face and flat
+against a backdrop that would otherwise land at -7. Not a clamp: a clamp is a
+gradient discontinuity landing exactly on the silhouette, and discontinuities
+crease.
+
+**Re-tune `amp` afterwards.** The two multiply, so a calibrated plate's
+effective gain rises by roughly the `scale`, and 0.045 becomes a smear. The five
+plates calibrated here landed at 0.004 to 0.005, which is about half of where
+each one's sampling map folds. They are kept as separate fields on purpose:
+`amp` is how hard this sitter turns, an artistic knob, and `scale` is how this
+particular map's range becomes relief, a calibration. Collapsed into one number,
+no plate's `amp` could be read against another's.
+
 Record the sigma you settle on beside the plate, wherever your project keeps its
 provenance, so the next person regenerating the map does not start from scratch.
 The gallery keeps a `plate.json` per slug with a `depthSigma` field. `GazePlate`
@@ -387,6 +426,22 @@ outline; one whose edge is outside the plateau grows a flat, a hook, or a hard
 dark arc where the compression piles pixels up. The `--iris-rx/ry` and
 `--rim-rx/ry` overrides let a candidate calibration be seen before it is written
 down, and they apply to both eyes.
+
+`--full` answers the other question, which the eye crops cannot: whether the
+HEAD reads as one turning volume or as flat cards sliding over each other. It
+renders the whole plate at full head-turn, left, at rest and right, and `--flat`
+renders the same plate with `depth` ignored, which is the before to the after.
+`--pivot`, `--scale` and `--amp` override the record the same way the ellipse
+flags do, so a candidate calibration can be looked at before it is written down.
+
+    python3 tools/plate/warp.py <slug> --plates /tmp/plates.json --full
+    python3 tools/plate/warp.py <slug> --plates /tmp/plates.json --full --flat
+
+What to read is the difference between the two outer frames. A head that is
+really rotating moves its near side and its far side by different amounts and in
+opposite directions, so the nose crosses the face while the ear barely moves and
+the silhouette stays put. A head on the wrong side of the pivot slides whole:
+the silhouette shifts against the backdrop and the interior stays rigid.
 
 ## What the plates are
 

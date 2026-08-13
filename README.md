@@ -20,11 +20,23 @@ are worth reading before you pick an image.
 
 **The head turns on a depth map.** The depth map is grayscale, the same pixel
 dimensions as the print, white nearest. Every fragment shifts the coordinate it
-samples the print at by `(depth - 0.5) * amp * mouse`, so a nose at 0.85 travels
-one way, a background at 0.15 travels the other, and near features move further
-than far ones. That difference is the whole illusion of a head rotating. Nothing
-is modelled and no geometry exists; it is a texture read at a moved address, and
-its cost is one extra sample per fragment.
+samples the print at by `tanh((depth - pivot) * scale) * amp * mouse`, so a nose
+in front of the pivot travels one way, a cheek behind it travels the other, and
+near features move further than far ones. That difference is the whole illusion
+of a head rotating. Nothing is modelled and no geometry exists; it is a texture
+read at a moved address, and its cost is one extra sample per fragment.
+
+`pivot` is the plane the head rotates about and it has to be **measured**, not
+assumed. A monocular depth estimator spends most of its 0..1 on the step between
+sitter and backdrop, so the sitter lands around 0.77, the backdrop around 0.03,
+and the naive pivot of 0.5 falls in the empty gap between them: the whole head
+then sits on one side of the axis and slides bodily instead of turning, which
+reads as flat cards rather than a face. `scale` takes the sitter's own relief,
+typically only 0.17 to 0.23 of the range, back out to roughly ±1, and `tanh`
+saturates the backdrop smoothly so the silhouette cannot tear.
+`tools/plate/depth.py --calibrate <depth.png>` prints both for a finished map.
+A plate that sets neither gets `(depth - 0.5) * amp * mouse`, bit for bit what
+this rig burned before the pivot existed.
 
 **The eyes move separately, and faster.** On top of that shifted coordinate each
 eye adds an offset of its own, confined by two measured ellipses. The gain is
@@ -144,7 +156,11 @@ type GazePlate = {
     lidFollow: number;   // 0..1, how much of the vertical gaze the lid carries
     lidReach: number;    // where the lid's motion dies, as a multiple of the rim
   };
-  amp: number;           // head-turn amplitude; 0.045 is known good
+  amp: number;           // head-turn amplitude; 0.045 uncalibrated, ~0.005 with depth
+  depth?: {              // optional; absent is exactly the old (depth - 0.5) term
+    pivot: number;       // the depth the head rotates about, measured. ~0.77
+    scale: number;       // this map's relief, out to about ±1. ~11
+  };
   phase: number;         // glance-clock offset; set it with phaseFor(index)
 };
 ```

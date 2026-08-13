@@ -34,6 +34,18 @@ dark arc where the compression piles pixels up.
 
 The overrides exist so a candidate calibration can be seen before it is written
 down. They apply to both eyes.
+
+--full is the other failure this tool has to be able to show, and the eye crops
+above cannot: whether the HEAD reads as one turning volume or as a stack of flat
+cards sliding over each other. That is invisible at rest and invisible in an eye
+crop, which is most of why it survived as long as it did, so this mode renders
+the whole plate at full head-turn instead. --flat renders the same plate with
+`depth` ignored, which is the before to the after.
+
+    python3 tools/plate/warp.py nietzsche --plates /tmp/plates.json --full
+    python3 tools/plate/warp.py nietzsche --plates /tmp/plates.json --full --flat
+    python3 tools/plate/warp.py nietzsche --plates /tmp/plates.json --full \\
+      --pivot 0.77 --scale 10.6 --amp 0.012
 """
 
 import argparse
@@ -113,6 +125,20 @@ def between(px, py, cx, cy, ax, ay, bx, by):
     return 1 - hermite(t)
 
 
+def turn(d: np.ndarray, p: dict, over: dict) -> np.ndarray:
+    """The shader's parallax term: tanh((d - pivot) * scale), or (d - 0.5) for a
+    plate that carries no `depth` calibration.
+
+    The gate is the shader's, spelled the same way and for the same reason: an
+    uncalibrated plate must warp EXACTLY as it did before the pivot existed, and
+    tanh(d - 0.5) is not d - 0.5.
+    """
+    cal = over["depth"] if "depth" in over else p.get("depth")
+    if not cal or not cal.get("scale"):
+        return d - 0.5
+    return np.tanh((d - cal["pivot"]) * cal["scale"])
+
+
 def warp(albedo: np.ndarray, depth: np.ndarray, p: dict, mouse: tuple[float, float],
          over: dict) -> np.ndarray:
     """Both warps, in image coordinates.
@@ -126,9 +152,10 @@ def warp(albedo: np.ndarray, depth: np.ndarray, p: dict, mouse: tuple[float, flo
     mx, my = mouse
 
     # parallax head-turn, exactly as main() does it
-    d = depth / 255.0
-    sx = X - (d - 0.5) * p["amp"] * mx
-    sy = Y - (d - 0.5) * p["amp"] * (-my) * -1.0
+    d = turn(depth / 255.0, p, over)
+    amp = over.get("amp", p["amp"])
+    sx = X - d * amp * mx
+    sy = Y - d * amp * (-my) * -1.0
 
     gz_x = np.clip(mx, -1, 1) * p["gaze"]["maxX"]
     gz_y = np.clip(my, -1, 1) * p["gaze"]["maxY"] + p["gaze"]["restDown"]
@@ -186,6 +213,40 @@ def strip(p: dict, over: dict, zoom: int, out_dir: Path, assets: Path) -> list[P
     return written
 
 
+def full(p: dict, over: dict, out_dir: Path, assets: Path, scale: float) -> Path:
+    """The whole plate at full head-turn: hard left, at rest, hard right.
+
+    What to look for is the difference BETWEEN the two outer frames, and whether
+    it is one solid volume turning or several flat regions sliding. A head that
+    is really rotating moves its near side and its far side by different amounts
+    and in opposite directions about the pivot, so the nose crosses the face
+    while the ear barely moves. A head sitting on the wrong side of the pivot
+    translates: the silhouette shifts wholesale against the backdrop, the
+    interior stays rigid, and it reads as cardboard however strong the amp is.
+
+    Rendered at the plate's own resolution, then scaled down for viewing, so
+    what is being judged is the real sampling map and not a resampled one.
+    """
+    alb = np.asarray(Image.open(assets / "albedo.jpg").convert("RGB"), dtype=float)
+    dep = np.asarray(Image.open(assets / "depth.png").convert("L"), dtype=float)
+    tiles = [
+        Image.fromarray(warp(alb, dep, p, m, over).astype(np.uint8))
+        for m in ((-1.0, 0.0), (0.0, 0.0), (1.0, 0.0))
+    ]
+    if scale != 1.0:
+        size = (max(1, int(tiles[0].width * scale)), max(1, int(tiles[0].height * scale)))
+        tiles = [t.resize(size, Image.LANCZOS) for t in tiles]
+    tw, th = tiles[0].size
+    sheet = Image.new("RGB", (tw * len(tiles) + 6 * (len(tiles) - 1), th), (190, 0, 0))
+    for i, t in enumerate(tiles):
+        sheet.paste(t, (i * (tw + 6), 0))
+    cal = over["depth"] if "depth" in over else p.get("depth")
+    tag = "flat" if not cal or not cal.get("scale") else "pivot"
+    path = out_dir / f"turn-{p['slug']}-{tag}.png"
+    sheet.save(path)
+    return path
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("slug", nargs="?")
@@ -195,6 +256,15 @@ def main() -> int:
     ap.add_argument("--rim-rx", type=float)
     ap.add_argument("--rim-ry", type=float)
     ap.add_argument("--zoom", type=int, default=5)
+    ap.add_argument("--full", action="store_true",
+                    help="whole plate at full head-turn instead of the eye crops")
+    ap.add_argument("--shrink", type=float, default=0.5,
+                    help="viewing scale for --full; the warp itself is always full-res")
+    ap.add_argument("--pivot", type=float, help="override depth.pivot")
+    ap.add_argument("--scale", type=float, help="override depth.scale")
+    ap.add_argument("--amp", type=float, help="override the head-turn amplitude")
+    ap.add_argument("--flat", action="store_true",
+                    help="ignore depth entirely: the parallax as it was before the pivot")
     ap.add_argument("--out", type=Path, default=Path("/tmp"))
     ap.add_argument("--plates", type=Path,
                     help="JSON file holding one plate record or a list of them")
@@ -205,7 +275,13 @@ def main() -> int:
 
     over = {k: v for k, v in (
         ("iris_rx", a.iris_rx), ("iris_ry", a.iris_ry),
-        ("rim_rx", a.rim_rx), ("rim_ry", a.rim_ry)) if v is not None}
+        ("rim_rx", a.rim_rx), ("rim_ry", a.rim_ry), ("amp", a.amp)) if v is not None}
+    if a.flat:
+        over["depth"] = None
+    elif a.pivot is not None or a.scale is not None:
+        if a.pivot is None or a.scale is None:
+            sys.exit("--pivot and --scale go together; a pivot with no scale does nothing")
+        over["depth"] = {"pivot": a.pivot, "scale": a.scale}
 
     plates = load_plates(a.plates)
     want = [p for p in plates if a.all or p["slug"] == a.slug]
@@ -216,6 +292,14 @@ def main() -> int:
 
     for p in want:
         assets = assets_for(p["slug"], a.assets)
+        if a.full:
+            cal = over["depth"] if "depth" in over else p.get("depth")
+            amp = over.get("amp", p["amp"])
+            said = (f"pivot {cal['pivot']:.3f} scale {cal['scale']:.2f}"
+                    if cal and cal.get("scale") else "no depth calibration, pivot 0.5")
+            print(f"{p['slug']}: amp {amp}, {said}")
+            print(f"  {full(p, over, a.out, assets, a.shrink)}   frames: turn left, rest, turn right")
+            continue
         with Image.open(assets / "albedo.jpg") as im:
             w, h = im.size
         e = p["eyes"]["l"]

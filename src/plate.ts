@@ -103,10 +103,50 @@ export type GazePlate = {
     lidReach: number;
   };
 
-  /** Head-turn amplitude fed to the parallax warp. 0.045 is known good; 0.07 was
-   *  tried on the philosopher and reverted, because the stronger warp magnifies
-   *  every depth-map imperfection at the silhouette. */
+  /** Head-turn amplitude fed to the parallax warp: how hard this sitter turns,
+   *  an artistic knob.
+   *
+   *  0.045 is the number an UNCALIBRATED plate wants, and it is the one where
+   *  0.07 was tried on the philosopher and reverted because the stronger warp
+   *  magnified every depth-map imperfection at the silhouette. That reversal is
+   *  a symptom of the depth range being spent on the silhouette rather than on
+   *  the face; see `depth` below. A calibrated plate wants roughly an eighth of
+   *  it, because `depth.scale` has taken over the job of turning this map's
+   *  range into relief, and the two multiply.
+   *
+   *  They are mathematically redundant and are kept apart anyway: collapsing
+   *  them would make every plate's `amp` unreadable, since a number that is
+   *  half calibration and half intent cannot be compared across two sitters
+   *  whose maps came out differently. */
   amp: number;
+
+  /** How this plate's depth map becomes relief. Optional, and absent means the
+   *  parallax term is `(d - 0.5)` exactly, bit for bit what shipped before this
+   *  field existed: 0 is not a neutral default for `scale`, it is an exact one,
+   *  the same treatment `gaze.lidFollow` gets and for the same reason.
+   *
+   *  A monocular estimator spends most of its 0..1 separating the sitter from
+   *  the backdrop: across the five plates this rig was calibrated on, that step
+   *  is 0.67 to 0.77 while the whole relief of the FACE is 0.165 to 0.231, and
+   *  almost nothing sits at 0.5. So an uncalibrated plate rotates about a plane
+   *  that lies in the empty gap between sitter and backdrop, the head
+   *  translates wholesale instead of turning, and the sitter reads as a stack
+   *  of flat cards sliding over each other.
+   *
+   *  Measure both with `tools/plate/depth.py --calibrate <depth.png>`, which
+   *  needs only numpy and PIL and reads a finished map, since a shipped plate's
+   *  depth.png generally cannot be regenerated. */
+  depth?: {
+    /** The depth value the head rotates about: the mean depth over the sitter.
+     *  Around 0.77 on these plates, nowhere near 0.5. */
+    pivot: number;
+    /** Multiplier taking the sitter's own relief out to roughly +-1, the
+     *  reciprocal of half its p5-to-p95 spread. Around 10. The shader passes
+     *  the scaled depth through `tanh`, so the backdrop saturates smoothly
+     *  instead of tearing the silhouette open, and a value of 0 turns the whole
+     *  remap off. */
+    scale: number;
+  };
 
   /** Glance-clock offset in seconds. Set it with phaseFor(index), never by hand. */
   phase: number;

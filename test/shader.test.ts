@@ -132,6 +132,48 @@ test("the eye gains are evaluated at the parallax-shifted uv, not the raw one", 
   assert.match(FRAG, /float l = lidGain\(p, eye, rim, uLidReach\);/);
 });
 
+test("the head turns about the plate's own depth, not about the middle of the byte range", () => {
+  // The bug this pins is the sitter reading as sliding cards. A monocular depth
+  // map spends its 0..1 on the sitter-against-backdrop step, so 0.5 lands in the
+  // empty gap between them: the whole face sits on one side of the pivot and
+  // translates as one piece, and the face's own relief, which is the only part
+  // that reads as ROTATION, is 3.5 to 4.6 times smaller than the step it is
+  // riding on. Measured across five plates. Putting the pivot back on the face
+  // is the fix; uScale is what makes the relief that is left worth turning.
+  assert.match(FRAG, /float turn = uScale > 0\.0 \? tanh\(\(d - uPivot\) \* uScale\) : d - 0\.5;/);
+  assert.match(FRAG, /vec2 suv = uv - turn \* uAmp \* uMouse;/);
+  // And NOT a clamp. A clamp is a gradient discontinuity landing exactly on the
+  // silhouette, which is the one place this rig cannot afford one: the whole
+  // lesson of tools/plate/warp.py is that discontinuities crease, and a crease
+  // at the silhouette is precisely the artifact the pivot exists to remove.
+  assert.doesNotMatch(FRAG, /clamp\(\s*\(?d - uPivot/);
+});
+
+test("an uncalibrated plate's parallax is the exact term that shipped before the pivot", () => {
+  // The same guarantee gaze.lidFollow gives, spelled the same way: 0 is not a
+  // neutral default for uScale, it is an exact one. tanh(d - 0.5) is not
+  // d - 0.5, so an unconditional remap would move every frozen plate by a hair
+  // and quietly invalidate every amp in every room. The branch is on a uniform,
+  // so it is uniform control flow and costs nothing.
+  const parallax = FRAG.slice(FRAG.indexOf("float turn ="), FRAG.indexOf("vec2 off ="));
+  assert.match(parallax, /: d - 0\.5;/);
+  assert.doesNotMatch(parallax, /tanh\(d - 0\.5\)/);
+});
+
+test("the lamp's pseudo-normal reads the raw depth, not the remapped turn", () => {
+  // Decided rather than overlooked. A calibrated uScale is around 10, so
+  // differencing the remapped field here would multiply every gradient by that
+  // and rewrite the specular on every plate. Changing the lighting while fixing
+  // the parallax would make one change unreviewable as two.
+  // Comments stripped first, because the paragraph in the shader that explains
+  // this decision necessarily names the very identifiers the check forbids.
+  const normal = FRAG.slice(FRAG.indexOf("float e = 1.0/512.0"), FRAG.indexOf("vec3 n = normalize"))
+    .replace(/\/\/[^\n]*/g, "");
+  assert.match(normal, /float dx = dep\(uv\+vec2\(e,0\.\)\) - dep\(uv-vec2\(e,0\.\)\);/);
+  assert.match(normal, /float dy = dep\(uv\+vec2\(0\.,e\)\) - dep\(uv-vec2\(0\.,e\)\);/);
+  assert.doesNotMatch(normal, /uScale|uPivot|tanh|turn/);
+});
+
 test("the lamp radius is a uniform, so one torch can light the whole wall", () => {
   // The 0.85 that used to be here was a radius in plate heights, which meant
   // every plate lit itself identically and a wall of twelve had twelve suns.

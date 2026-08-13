@@ -238,6 +238,12 @@ export function createRig(opts: {
   const uRest = loc("uRest");
 
   gl.uniform1f(loc("uAmp"), plate.amp);
+  // Where the head's rotation axis sits in this map's depth range, and how much
+  // of that range the sitter's own relief occupies. A plate that has not been
+  // calibrated gets (0.5, 0), and the shader reads a zero scale as "no remap",
+  // which is exactly the term it burned before these two existed.
+  gl.uniform1f(loc("uPivot"), plate.depth?.pivot ?? 0.5);
+  gl.uniform1f(loc("uScale"), plate.depth?.scale ?? 0);
   gl.uniform1f(uFlick, 1.0); // the static branch keeps a steady flame
   gl.uniform4f(loc("uEyeL"), ...eyeUniform(plate.eyes.l.iris));
   gl.uniform4f(loc("uEyeR"), ...eyeUniform(plate.eyes.r.iris));

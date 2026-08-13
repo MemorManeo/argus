@@ -21,6 +21,8 @@ uniform sampler2D uAlbedo, uDepth;
 uniform vec2 uMouse;   // -1..1 eased
 uniform vec2 uLight;   // the cursor in THIS plate's uv; runs outside 0..1
 uniform float uAmp, uAspect;
+uniform float uPivot;      // depth the head rotates about; 0.5 uncalibrated
+uniform float uScale;      // this map's relief, out to about +-1; 0 is OFF
 uniform float uFlick;      // candle gain, 1.0 when static
 uniform float uReach;      // lamp radius, in plate heights of THIS plate
 uniform vec4 uEyeL, uEyeR; // iris ellipse: centre.xy (UV), radii.zw
@@ -127,7 +129,34 @@ vec2 eyeOffset(vec2 p, vec2 gaze, vec4 eye, vec2 rim){
 void main(){
   vec2 uv = vUv;
   float d = dep(uv);
-  vec2 suv = uv - (d - 0.5) * uAmp * uMouse;   // parallax head-turn
+  // The head turns about uPivot, and about 0.5 only when nobody has said
+  // otherwise.
+  //
+  // A monocular depth estimator spends most of its 0..1 on the step between
+  // sitter and backdrop. Measured over five shipped plates: the step is 0.67 to
+  // 0.77 while the entire relief of the face is 0.165 to 0.231, the sitter sits
+  // near 0.77, the backdrop near 0.03, and 5 to 12 percent of pixels lie near
+  // 0.5 (which is the feathered silhouette ring, not the face). Pivoting at 0.5
+  // therefore puts the whole head on one side of the pivot: it TRANSLATES
+  // wholesale while the backdrop counter-slides, and the few interior plateaus
+  // (nose, moustache, hair, shoulders) each translate rigidly at slightly
+  // different rates. On a 920px plate at amp 0.045 that is about 4px of
+  // interior differential against 31px of head-against-backdrop. Cardboard.
+  //
+  // uScale then takes the sitter's own relief back out to roughly +-1, which is
+  // what turns a gentle dome into one you can see. tanh is what keeps the
+  // backdrop, which lands at -7 or worse once scaled, from tearing the
+  // silhouette open. Deliberately not clamp: a clamp puts a gradient
+  // discontinuity exactly at the silhouette, and creasing at the silhouette is
+  // the failure tools/plate/warp.py exists to catch. tanh is C-infinity,
+  // near-linear across the face, and flat against the backdrop.
+  //
+  // uScale 0 is not a neutral default, it is an exact one: the term is
+  // (d - 0.5) again, bit for bit what shipped before this uniform existed, so
+  // an uncalibrated plate is owed no regression hunt. tanh(d - 0.5) is NOT
+  // d - 0.5, which is why this is gated rather than unconditional.
+  float turn = uScale > 0.0 ? tanh((d - uPivot) * uScale) : d - 0.5;
+  vec2 suv = uv - turn * uAmp * uMouse;   // parallax head-turn
   // pupils slide within the eye whites; gains at suv keep the region
   // glued to the eye pixels while the head turns (the rim regions, out to
   // uLidReach, are disjoint, so summing the two eyes' contributions is exact)
@@ -135,6 +164,12 @@ void main(){
            + eyeOffset(suv, uGaze + uRest.zw, uEyeR, uRimR);
   vec3 col = texture(uAlbedo, suv - off, LOD_BIAS).rgb;
   float e = 1.0/512.0;                          // pseudo-normal from depth
+  // From the RAW depth, deliberately, and not from the remapped turn above. A
+  // calibrated uScale is around 10, so feeding the remap in here would multiply
+  // every gradient in the field by that and rewrite the specular on every
+  // plate at once. How a properly scaled relief should catch the lamp is a real
+  // question and a separate one; answering it silently inside a parallax fix
+  // would be the bad outcome.
   float dx = dep(uv+vec2(e,0.)) - dep(uv-vec2(e,0.));
   float dy = dep(uv+vec2(0.,e)) - dep(uv-vec2(0.,e));
   vec3 n = normalize(vec3(-dx, -dy, 0.25));
@@ -166,6 +201,8 @@ export const UNIFORMS = [
   "uMouse",
   "uLight",
   "uAmp",
+  "uPivot",
+  "uScale",
   "uAspect",
   "uFlick",
   "uReach",
